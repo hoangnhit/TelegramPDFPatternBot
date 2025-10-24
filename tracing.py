@@ -52,11 +52,12 @@ def process_image_to_pdf_page(bgr: np.ndarray, invert: bool = True, stroke: floa
     return svg_to_pdf_bytes(svg_str)
 
 def process_pdf_to_pdf(in_path: str, out_path: str, invert: bool = True, stroke: float = 2.0, dpi: int = 400):
+    from utils_pdf import merge_pdf_bytes
     pages_bgr = render_pdf_to_images(in_path, dpi=dpi)
     pdf_pages = [process_image_to_pdf_page(bgr, invert, stroke) for bgr in pages_bgr]
+    merged_pdf = merge_pdf_bytes(pdf_pages)
     with open(out_path, "wb") as f:
-        for p in pdf_pages:
-            f.write(p)
+        f.write(merged_pdf)
     return out_path
 
 def process_imagefile_to_pdf(img_path: str, out_path: str, invert: bool = True, stroke: float = 2.0):

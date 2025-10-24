@@ -27,14 +27,27 @@ async def handle_doc(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message
     cap = msg.caption or ""
     opts = parse_opts(cap)
-    file = await msg.document.get_file()
-    in_name = msg.document.file_name
+    
+    is_pdf = False
+    if msg.document:
+        file = await msg.document.get_file()
+        in_name = msg.document.file_name
+        mime_type = msg.document.mime_type or ""
+        is_pdf = mime_type == "application/pdf" or in_name.lower().endswith(".pdf")
+    elif msg.photo:
+        file = await msg.photo[-1].get_file()
+        in_name = f"photo_{file.file_id}.jpg"
+        is_pdf = False
+    else:
+        await msg.reply_text("Vui lòng gửi PDF hoặc ảnh.")
+        return
+    
     in_path = os.path.join(DOWNLOAD_DIR, in_name)
-    out_path = os.path.join(DOWNLOAD_DIR, f"outlined_{in_name}")
+    out_path = os.path.join(DOWNLOAD_DIR, f"outlined_{in_name.rsplit('.', 1)[0]}.pdf")
     await msg.reply_text("Đang xử lý, vui lòng chờ...⏳")
     await file.download_to_drive(in_path)
     try:
-        if in_name.endswith(".pdf"):
+        if is_pdf:
             process_pdf_to_pdf(in_path, out_path, opts["invert"], opts["stroke"], opts["dpi"])
         else:
             process_imagefile_to_pdf(in_path, out_path, opts["invert"], opts["stroke"])
