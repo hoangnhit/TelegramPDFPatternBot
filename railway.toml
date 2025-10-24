@@ -1,0 +1,13 @@
+[build]
+builder = "railpack/python"
+
+# Các thư viện hệ thống cần cho OpenCV và PDF
+apt_packages = [
+  "libgl1",
+  "libglib2.0-0",
+  "poppler-utils"
+]
+
+[deploy]
+start = "python bot.py"
+S
