@@ -1,7 +1,11 @@
 [build]
 builder = "Nixpacks"
 
-[build.nixpacksPlan]
-phases.setup.aptPkgs = ["libgl1", "libglib2.0-0", "poppler-utils"]
-phases.install.cmds = ["pip install -r requirements.txt"]
-start = "python bot.py"
+[phases.setup]
+aptPkgs = ["libgl1", "libglib2.0-0", "poppler-utils"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[start]
+cmd = "python bot.py"
