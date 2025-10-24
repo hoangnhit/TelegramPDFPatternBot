@@ -1,13 +1,15 @@
 [build]
-builder = "railpack"
-buildCommand = "pip install -r requirements.txt"
+builder = "Nixpacks"
 
-# Cài thêm các thư viện hệ thống cần thiết cho OpenCV và Poppler
-aptPackages = [
+[phases.setup]
+aptPkgs = [
   "libgl1",
   "libglib2.0-0",
   "poppler-utils"
 ]
 
-[deploy]
-startCommand = "python bot.py"
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[start]
+cmd = "python bot.py"
