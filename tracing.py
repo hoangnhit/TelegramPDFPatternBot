@@ -1,15 +1,19 @@
 import cv2
 import numpy as np
 import svgwrite
-from pdf2image import convert_from_path
+from pdf2image import convert_from_path, pdfinfo_from_path
 from PIL import Image
 import cairosvg
+
+def count_pdf_pages(pdf_path: str) -> int:
+    info = pdfinfo_from_path(pdf_path)
+    return info["Pages"]
 
 def _pil_to_bgr(pil_img):
     return cv2.cvtColor(np.array(pil_img.convert("RGB")), cv2.COLOR_RGB2BGR)
 
-def render_pdf_to_images(pdf_path: str, dpi: int = 400):
-    pages = convert_from_path(pdf_path, dpi=dpi)
+def render_pdf_to_images(pdf_path: str, dpi: int = 400, first_page: int = None, last_page: int = None):
+    pages = convert_from_path(pdf_path, dpi=dpi, first_page=first_page, last_page=last_page)
     return [_pil_to_bgr(p) for p in pages]
 
 def preprocess(bgr: np.ndarray, invert: bool = True, canny_low: int = 30, canny_high: int = 90):
@@ -53,9 +57,9 @@ def process_image_to_pdf_page(bgr: np.ndarray, invert: bool = True, stroke: floa
     svg_str = contours_to_svg(simp, (w, h), stroke_width=stroke)
     return svg_to_pdf_bytes(svg_str)
 
-def process_pdf_to_pdf(in_path: str, out_path: str, invert: bool = True, stroke: float = 2.0, dpi: int = 400, precision: float = 0.0005, min_len: int = 20):
+def process_pdf_to_pdf(in_path: str, out_path: str, invert: bool = True, stroke: float = 2.0, dpi: int = 400, precision: float = 0.0005, min_len: int = 20, first_page: int = None, last_page: int = None):
     from utils_pdf import merge_pdf_bytes
-    pages_bgr = render_pdf_to_images(in_path, dpi=dpi)
+    pages_bgr = render_pdf_to_images(in_path, dpi=dpi, first_page=first_page, last_page=last_page)
     pdf_pages = [process_image_to_pdf_page(bgr, invert, stroke, precision, min_len) for bgr in pages_bgr]
     merged_pdf = merge_pdf_bytes(pdf_pages)
     with open(out_path, "wb") as f:

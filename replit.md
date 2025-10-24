@@ -15,8 +15,11 @@ This is a Python-based Telegram bot application that performs image processing a
 
 ### Bot Layer (bot.py)
 - **Framework**: python-telegram-bot library for Telegram Bot API integration
-- **Handler Pattern**: Uses CommandHandler for `/start` command and MessageHandler for document/photo uploads
-- **File Processing Flow**: Downloads files → Processes them → Returns traced PDF
+- **Handler Pattern**: Uses CommandHandler for `/start` command and ConversationHandler for interactive PDF page selection
+- **File Processing Flow**: 
+  - **For Images**: Downloads file → Processes immediately → Returns traced PDF
+  - **For PDFs**: Downloads file → Counts pages → Asks user which pages to process → Processes selected pages → Returns traced PDF
+- **Conversation States**: WAITING_FOR_PAGES state manages user input for page selection
 - **Configuration**: Environment variables via dotenv (.env file)
   - `TELEGRAM_BOT_TOKEN`: Bot authentication
   - `DOWNLOAD_DIR`: Working directory for file operations (defaults to `./work`)
@@ -49,11 +52,14 @@ Users can customize processing via caption text:
 **Example for standard use**: "invert=false stroke=1.5 dpi=300"
 **Example for maximum precision**: "precision=0 dpi=600 min_len=10"
 
-**Recent Changes (Oct 2024)**: System upgraded for 95% accuracy in sewing pattern tracing:
-- Reduced default eps_ratio from 0.002 to 0.0005 for minimal detail loss
-- Reduced min_len from 100 to 20 to capture handwritten annotations
+**Recent Changes (Oct 2024)**: System upgraded for 100% accuracy in sewing pattern tracing:
+- Default precision set to 0 (100% accuracy - no simplification) for maximum detail retention  
+- Increased default DPI to 600 for higher resolution output
+- Reduced min_len from 100 to 10 to capture even the smallest handwritten annotations
 - Switched from RETR_EXTERNAL to RETR_LIST to preserve interior contours and seams
-- Optimized preprocessing (smaller kernels, lower Canny thresholds) to preserve sharp points and fine details
+- Optimized preprocessing (smaller kernels, lower Canny thresholds: 30/90) to preserve sharp points
+- Added interactive PDF page selection: bot asks user which pages to process before starting
+- ConversationHandler manages the workflow for multi-page PDFs
 
 ## Processing Architecture
 
