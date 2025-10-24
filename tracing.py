@@ -12,21 +12,23 @@ def render_pdf_to_images(pdf_path: str, dpi: int = 400):
     pages = convert_from_path(pdf_path, dpi=dpi)
     return [_pil_to_bgr(p) for p in pages]
 
-def preprocess(bgr: np.ndarray, invert: bool = True):
+def preprocess(bgr: np.ndarray, invert: bool = True, canny_low: int = 30, canny_high: int = 90):
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-    gray = cv2.bilateralFilter(gray, 7, 50, 50)
+    gray = cv2.bilateralFilter(gray, 5, 40, 40)
     mode = cv2.THRESH_BINARY_INV if invert else cv2.THRESH_BINARY
     bw = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, mode, 51, 8)
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))
-    bw = cv2.morphologyEx(bw, cv2.MORPH_CLOSE, kernel, iterations=2)
-    edges = cv2.Canny(bw, 50, 150)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2,2))
+    bw = cv2.morphologyEx(bw, cv2.MORPH_CLOSE, kernel, iterations=1)
+    edges = cv2.Canny(bw, canny_low, canny_high)
     return edges
 
-def extract_contours(edges: np.ndarray, min_len: int = 100):
-    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+def extract_contours(edges: np.ndarray, min_len: int = 20):
+    contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     return [c for c in contours if len(c) >= min_len]
 
-def simplify_contour(cnt: np.ndarray, eps_ratio: float = 0.002):
+def simplify_contour(cnt: np.ndarray, eps_ratio: float = 0.0005):
+    if eps_ratio <= 0:
+        return cnt
     eps = eps_ratio * cv2.arcLength(cnt, True)
     return cv2.approxPolyDP(cnt, eps, True)
 
@@ -43,26 +45,26 @@ def contours_to_svg(contours, size_wh, stroke_width: float = 2.0):
 def svg_to_pdf_bytes(svg_str: str):
     return cairosvg.svg2pdf(bytestring=svg_str.encode("utf-8"))
 
-def process_image_to_pdf_page(bgr: np.ndarray, invert: bool = True, stroke: float = 2.0):
+def process_image_to_pdf_page(bgr: np.ndarray, invert: bool = True, stroke: float = 2.0, precision: float = 0.0005, min_len: int = 20):
     h, w = bgr.shape[:2]
     edges = preprocess(bgr, invert)
-    contours = extract_contours(edges)
-    simp = [simplify_contour(c) for c in contours]
+    contours = extract_contours(edges, min_len=min_len)
+    simp = [simplify_contour(c, eps_ratio=precision) for c in contours]
     svg_str = contours_to_svg(simp, (w, h), stroke_width=stroke)
     return svg_to_pdf_bytes(svg_str)
 
-def process_pdf_to_pdf(in_path: str, out_path: str, invert: bool = True, stroke: float = 2.0, dpi: int = 400):
+def process_pdf_to_pdf(in_path: str, out_path: str, invert: bool = True, stroke: float = 2.0, dpi: int = 400, precision: float = 0.0005, min_len: int = 20):
     from utils_pdf import merge_pdf_bytes
     pages_bgr = render_pdf_to_images(in_path, dpi=dpi)
-    pdf_pages = [process_image_to_pdf_page(bgr, invert, stroke) for bgr in pages_bgr]
+    pdf_pages = [process_image_to_pdf_page(bgr, invert, stroke, precision, min_len) for bgr in pages_bgr]
     merged_pdf = merge_pdf_bytes(pdf_pages)
     with open(out_path, "wb") as f:
         f.write(merged_pdf)
     return out_path
 
-def process_imagefile_to_pdf(img_path: str, out_path: str, invert: bool = True, stroke: float = 2.0):
+def process_imagefile_to_pdf(img_path: str, out_path: str, invert: bool = True, stroke: float = 2.0, precision: float = 0.0005, min_len: int = 20):
     bgr = cv2.imread(img_path)
-    pdf_bytes = process_image_to_pdf_page(bgr, invert, stroke)
+    pdf_bytes = process_image_to_pdf_page(bgr, invert, stroke, precision, min_len)
     with open(out_path, "wb") as f:
         f.write(pdf_bytes)
     return out_path
